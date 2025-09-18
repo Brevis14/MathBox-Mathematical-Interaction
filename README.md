@@ -28,6 +28,7 @@ cd MathBox-Mathematical-Interaction
 
 # 用浏览器直接打开 demo1.html / demo2.html / demo3.html
 # 或者用 VSCode Live Server / python -m http.server 启动本地服务器
+```
 
 ## 📂 功能与结构
 
