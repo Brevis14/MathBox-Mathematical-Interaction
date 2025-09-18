@@ -2,12 +2,14 @@
 
 这是一个基于 **MathBox + Three.js** 的数学交互示例项目，目的是展示动态数学可视化和用户拖拽交互效果。
 
----
-
+--
 
 ## 📂 Demos
 
-- 
+- [Demo 1](https://brevis14.github.io/MathBox-Mathematical-Interaction/TF&ITF.html)
+- [Demo 2](https://brevis14.github.io/MathBox-Mathematical-Interaction/SinF-ControlSlider.html)
+- [Demo 3](https://brevis14.github.io/MathBox-Mathematical-Interaction/3dEuler'sProjection.html)
+- [Demo 3](https://brevis14.github.io/MathBox-Mathematical-Interaction/UnitCircle2TF.html)
 
 👉 如果直接访问 [主入口](https://brevis14.github.io/MathBox-Mathematical-Interaction/)，会看到一个导航页，里面也有以上所有链接。
 
