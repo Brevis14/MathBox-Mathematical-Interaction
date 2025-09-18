@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>MathBox 交互式函数浏览器（去掉数轴数字）</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #f0f0f0;
+            font-family: system-ui, sans-serif;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        canvas.grabbing {
+            cursor: grabbing;
+        }
+
+        /* 顶部函数切换按钮 */
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            padding: 8px;
+            background: rgba(255, 255, 255, .9);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+            z-index: 10;
+        }
+
+        .controls button {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .controls button.active {
+            background: #3090FF;
+            color: #fff;
+            border-color: #3090FF;
+        }
+
+        /* 公式显示 */
+        .formula {
+            position: absolute;
+            bottom: 24%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, .92);
+            color: #000;
+            border-radius: 6px;
+            font: 16px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            z-index: 9;
+        }
+    </style>
+    <!-- 依你之前可运行的版本： -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathbox@0.1.0/build/mathbox-bundle.min.js"></script>
+</head>
+
+<body>
+    <div id="func-controls" class="controls">
+        <button id="btn-sin" class="active">sin</button>
+        <button id="btn-cos">cos</button>
+        <button id="btn-tan">tan</button>
+        <button id="btn-asin">asin</button>
+        <button id="btn-acos">acos</button>
+        <button id="btn-atan">atan</button>
+    </div>
+    <div id="formula" class="formula">y = A sin(Bx + C)</div>
+
+    <script>
+        // --------- 1) 全局状态 & 函数族定义 ----------
+        const state = {
+            currentFunc: 'sin',
+            params: { A: 1.5, B: 1, C: 0 },
+            domain: [-5, 5],
+            rangeY: [-3, 3],
+        };
+
+        const funcDefs = {
+            sin: {
+                label: (p) => `y = ${fmt(p.A)}·sin(${fmt(p.B)}·x + ${fmt(p.C)})`,
+                domain: [-5, 5], range: [-3, 3],
+                defaultParams: { A: 1.5, B: 1, C: 0 },
+                expr: (x, p) => p.A * Math.sin(p.B * x + p.C),
+                getCP: (p) => ({ x: (Math.PI / 2 - p.C) / p.B, y: p.A, z: 0 }),
+                setFromCP: (pos, p) => { p.A = pos.y; p.C = Math.PI / 2 - pos.x * p.B; },
+            },
+            cos: {
+                label: (p) => `y = ${fmt(p.A)}·cos(${fmt(p.B)}·x + ${fmt(p.C)})`,
+                domain: [-5, 5], range: [-3, 3],
+                defaultParams: { A: 1.5, B: 1, C: 0 },
+                expr: (x, p) => p.A * Math.cos(p.B * x + p.C),
+                getCP: (p) => ({ x: -p.C / p.B, y: p.A, z: 0 }),
+                setFromCP: (pos, p) => { p.A = pos.y; p.C = -pos.x * p.B; },
+            },
+            tan: {
+                label: (p) => `y = ${fmt(p.A)}·tan(${fmt(p.B)}·x + ${fmt(p.C)})`,
+                domain: [-5, 5], range: [-4, 4],
+                defaultParams: { A: 1, B: 1, C: 0 },
+                expr: (x, p) => (Math.abs(Math.cos(p.B * x + p.C)) < 0.02) ? null : (p.A * Math.tan(p.B * x + p.C)),
+                getCP: (p) => ({ x: (Math.PI / 4 - p.C) / p.B, y: p.A, z: 0 }),
+                setFromCP: (pos, p) => { p.A = pos.y; p.C = Math.PI / 4 - pos.x * p.B; },
+            },
+            asin: {
+                label: (p) => `y = ${fmt(p.A)}·asin(${fmt(p.B)}·x)`,
+                domain: [-2, 2], range: [-3, 3],
+                defaultParams: { A: 1, B: 1, C: 0 },
+                expr: (x, p) => p.A * Math.asin(p.B * x),
+                getCP: (p) => ({ x: 1 / p.B, y: p.A * (Math.PI / 2), z: 0 }),
+                setFromCP: (pos, p) => { if (Math.abs(pos.x) > 1e-6) p.B = 1 / pos.x; p.A = pos.y / (Math.PI / 2); },
+            },
+            acos: {
+                label: (p) => `y = ${fmt(p.A)}·acos(${fmt(p.B)}·x)`,
+                domain: [-2, 2], range: [-1, 4],
+                defaultParams: { A: 1, B: 1, C: 0 },
+                expr: (x, p) => p.A * Math.acos(p.B * x),
+                getCP: (p) => {
+                    const x = 0.5 / p.B;
+                    return { x, y: p.A * Math.acos(p.B * x), z: 0 };
+                },
+                setFromCP: (pos, p) => {
+                    if (Math.abs(pos.x) > 1e-6) p.B = 0.5 / pos.x;
+                    const arg = p.B * pos.x;
+                    const acosv = (arg >= -1 && arg <= 1) ? Math.acos(arg) : NaN;
+                    if (!isNaN(acosv) && Math.abs(acosv) > 1e-6) p.A = pos.y / acosv;
+                },
+            },
+            atan: {
+                label: (p) => `y = ${fmt(p.A)}·atan(${fmt(p.B)}·x)`,
+                domain: [-5, 5], range: [-3, 3],
+                defaultParams: { A: 1, B: 1, C: 0 },
+                expr: (x, p) => p.A * Math.atan(p.B * x),
+                getCP: (p) => ({ x: 1 / p.B, y: p.A * Math.atan(1), z: 0 }),
+                setFromCP: (pos, p) => { if (Math.abs(pos.x) > 1e-6) p.B = 1 / pos.x; p.A = pos.y / Math.atan(1); },
+            },
+        };
+
+        function fmt(n) { return (Math.abs(n) < 1e-6 ? 0 : n).toFixed(2); }
+
+        // --------- 2) 初始化 MathBox / Three ----------
+        const mathbox = mathBox({
+            plugins: ['core', 'controls', 'cursor'],
+            controls: { klass: THREE.OrbitControls },
+        });
+        const three = mathbox.three;
+        const { scene, camera, renderer, controls } = three;
+        renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+        camera.position.set(0, 1.5, 5);
+
+        const view = mathbox.cartesian({
+            range: [[state.domain[0], state.domain[1]], [state.rangeY[0], state.rangeY[1]], [-1, 1]],
+            scale: [2, 1, 1],
+        });
+
+        // 坐标轴 + 网格
+        view.axis({ axis: 1, width: 3, color: '#000' });
+        view.axis({ axis: 2, width: 3, color: '#000' });
+        view.grid({ axes: [1, 2], width: 1, color: '#d0d0d0' });
+
+        // --------- 3) 曲线 ----------
+        function mainExpr(emit, x) {
+            const def = funcDefs[state.currentFunc];
+            const y = def.expr(x, state.params);
+            if (y !== null && !isNaN(y)) emit(x, y, 0);
+        }
+
+        const curve = view.interval({
+            id: 'mainCurve',
+            width: 512,
+            expr: mainExpr,
+            channels: 3,
+            range: [state.domain[0], state.domain[1]],
+        });
+        view.line({ points: '#mainCurve', color: '#3090FF', width: 5 });
+
+        // --------- 4) 控制点（拖拽） ----------
+        const controlPoint = new THREE.Mesh(
+            new THREE.SphereGeometry(0.15, 32, 32),
+            new THREE.MeshBasicMaterial({ color: 0x28a745 })
+        );
+        scene.add(controlPoint);
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const dragPlane = new THREE.Plane();
+        const worldPos = new THREE.Vector3();
+        let selected = null;
+
+        function updateControlPoint() {
+            const def = funcDefs[state.currentFunc];
+            const cp = def.getCP(state.params);
+            if (cp && isFinite(cp.x) && isFinite(cp.y)) {
+                controlPoint.position.set(cp.x, cp.y, cp.z || 0);
+            }
+        }
+
+        function refreshCurve() {
+            curve.set('expr', mainExpr);
+        }
+
+        function updateFormula() {
+            const def = funcDefs[state.currentFunc];
+            document.getElementById('formula').textContent = def.label(state.params);
+        }
+
+        function updateEverything() {
+            updateControlPoint();
+            refreshCurve();
+            updateFormula();
+        }
+
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            mouse.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+            raycaster.setFromCamera(mouse, camera);
+            const hit = raycaster.intersectObject(controlPoint);
+            if (hit.length) {
+                selected = hit[0].object;
+                controls.enabled = false;
+                renderer.domElement.classList.add('grabbing');
+                dragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(dragPlane.normal), hit[0].point);
+            }
+        });
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (!selected) return;
+            mouse.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+            raycaster.setFromCamera(mouse, camera);
+            if (raycaster.ray.intersectPlane(dragPlane, worldPos)) {
+                const def = funcDefs[state.currentFunc];
+                def.setFromCP(worldPos, state.params);
+                updateEverything();
+            }
+        });
+        renderer.domElement.addEventListener('mouseup', () => {
+            selected = null;
+            controls.enabled = true;
+            renderer.domElement.classList.remove('grabbing');
+        });
+
+        // --------- 5) 函数切换 ----------
+        function switchFunction(name) {
+            state.currentFunc = name;
+            const def = funcDefs[name];
+            state.params = { ...def.defaultParams };
+            state.domain = [...def.domain];
+            state.rangeY = [...def.range];
+
+            document.querySelectorAll('#func-controls button').forEach(b => {
+                b.classList.toggle('active', b.id === `btn-${name}`);
+            });
+
+            view.set('range', [[state.domain[0], state.domain[1]], [state.rangeY[0], state.rangeY[1]], [-1, 1]]);
+            curve.set('range', [state.domain[0], state.domain[1]]);
+
+            updateEverything();
+        }
+
+        document.querySelectorAll('#func-controls button').forEach(btn => {
+            btn.addEventListener('click', () => switchFunction(btn.id.replace('btn-', '')));
+        });
+
+        // --------- 6) 启动 ---------
+        switchFunction('sin');
+    </script>
+</body>
+
+</html>
