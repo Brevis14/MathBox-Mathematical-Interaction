@@ -4,22 +4,30 @@
 
 ---
 
-## 🌐 在线预览
 
-[在新标签页中查看交互示例](https://Brevis14.github.io/MathBox-Mathematical-Interaction/)  
+## 📂 Demos
 
----
+- 
 
-## 🛠 技术栈
+👉 如果直接访问 [主入口](https://brevis14.github.io/MathBox-Mathematical-Interaction/)，会看到一个导航页，里面也有以上所有链接。
 
-- **MathBox** — 用于渲染数学函数、坐标系和动画；  
-- **Three.js** — 提供 3D 渲染与相机控制（OrbitControls）；  
-- **JavaScript (ES Modules)** — 实现交互逻辑、拖拽控制、事件处理等；  
-- **HTML5 + CSS3** — 页面结构与样式展示；  
-- **GitHub Pages** — 静态托管与部署；  
-- **VSCode**（或其他代码编辑器） — 开发环境。
+## ⚙️ 技术栈
 
----
+- HTML5 + CSS3 + JavaScript
+- [MathBox.js](http://mathbox.io)  
+- WebGL（通过 MathBox 封装）
+
+## 🚀 本地运行
+
+```bash
+# 克隆仓库
+git clone https://github.com/Brevis14/MathBox-Mathematical-Interaction.git
+
+# 进入目录
+cd MathBox-Mathematical-Interaction
+
+# 用浏览器直接打开 demo1.html / demo2.html / demo3.html
+# 或者用 VSCode Live Server / python -m http.server 启动本地服务器
 
 ## 📂 功能与结构
 
