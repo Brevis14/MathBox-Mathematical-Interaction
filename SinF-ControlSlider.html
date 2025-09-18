@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MathBox 三角函数演示</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 进阶版本会用到的UI样式 */
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            font-family: sans-serif;
+        }
+
+        .controls div {
+            margin-bottom: 5px;
+        }
+
+        .controls label {
+            min-width: 80px;
+            display: inline-block;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathbox@0.1.0/build/mathbox-bundle.min.js"></script>
+</head>
+
+<body>
+    <div id="mathbox-container"></div>
+
+    <div id="controls-container" class="controls">
+        <div>
+            <label for="amplitude">振幅 (A):</label>
+            <input type="range" id="amplitude" min="0.1" max="2" value="1" step="0.1">
+            <span id="amplitude-value">1.0</span>
+        </div>
+        <div>
+            <label for="frequency">频率 (B):</label>
+            <input type="range" id="frequency" min="0.5" max="10" value="2" step="0.1">
+            <span id="frequency-value">2.0</span>
+        </div>
+        <div>
+            <label for="phase">相位 (C):</label>
+            <input type="range" id="phase" min="0" max="6.28" value="0" step="0.01">
+            <span id="phase-value">0.00</span>
+        </div>
+    </div>
+
+    <script>
+        // 确保DOM加载完毕
+        window.addEventListener('load', function () {
+            // --- 1. 获取UI控件和设置初始参数 ---
+            const amplitudeSlider = document.getElementById('amplitude');
+            const frequencySlider = document.getElementById('frequency');
+            const phaseSlider = document.getElementById('phase');
+
+            const amplitudeValueSpan = document.getElementById('amplitude-value');
+            const frequencyValueSpan = document.getElementById('frequency-value');
+            const phaseValueSpan = document.getElementById('phase-value');
+
+            // 用一个对象来存储函数的参数
+            const funcParams = {
+                amplitude: parseFloat(amplitudeSlider.value),
+                frequency: parseFloat(frequencySlider.value),
+                phase: parseFloat(phaseSlider.value),
+            };
+
+            // --- 2. MathBox 初始化 (与基础版本大部分相同) ---
+            const container = document.getElementById('mathbox-container');
+            const mathbox = mathBox({
+                element: container,
+                plugins: ['core', 'controls', 'cursor'],
+                controls: {
+                    klass: THREE.OrbitControls,
+                },
+            });
+
+            const three = mathbox.three;
+            three.camera.position.set(2, 2, 4);
+            three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+
+            const view = mathbox.cartesian({
+                range: [[-5, 5], [-2.5, 2.5], [-2, 2]], // 增大了Y轴范围以适应更大的振幅
+                scale: [2, 1, 1],
+            });
+
+            view.axis({ axis: 1, width: 3, color: '#808080' });
+            view.axis({ axis: 2, width: 3, color: '#808080' });
+            view.grid({ axes: [1, 3], width: 1, color: '#c0c0c0', divideX: 20, divideY: 20 });
+
+            // --- 3. 核心部分：数据源与UI联动 ---
+
+            // 定义数据生成函数，它会使用全局的 funcParams 对象
+            function sineFunctionExpr(emit, x, i, t) {
+                // y = A * sin(B * x + C + t)
+                // 我在这里也加入了时间 t，让曲线动起来，如果不需要可以去掉 `+ t`
+                const y = funcParams.amplitude * Math.sin(funcParams.frequency * x * Math.PI + funcParams.phase + t);
+                emit(x, y, 0);
+            }
+
+            // 创建数据源，并将上面的函数作为表达式
+            const curveData = view.interval({
+                id: 'sineCurve',
+                width: 512, // 提高点数使高频曲线更平滑
+                expr: sineFunctionExpr,
+                channels: 3,
+            });
+
+            // 绘制曲线
+            const curve = view.line({
+                points: '#sineCurve',
+                color: '#3090FF',
+                width: 5,
+            });
+
+            // 使用 play 来驱动动画（让相位持续变化）
+            mathbox.play({
+                target: 'cartesian',
+                pace: 5,
+                speed: 0.3,
+                loop: true,
+            });
+
+            // --- 4. 设置事件监听器 ---
+            function updateParameters() {
+                // 更新参数对象
+                funcParams.amplitude = parseFloat(amplitudeSlider.value);
+                funcParams.frequency = parseFloat(frequencySlider.value);
+                funcParams.phase = parseFloat(phaseSlider.value);
+
+                // 更新UI显示值
+                amplitudeValueSpan.textContent = funcParams.amplitude.toFixed(1);
+                frequencyValueSpan.textContent = funcParams.frequency.toFixed(1);
+                phaseValueSpan.textContent = funcParams.phase.toFixed(2);
+
+                // **关键步骤**: 更新MathBox中数据源的表达式
+                // 这会告诉MathBox在下一帧重新计算所有点的位置
+                mathbox.select('#sineCurve').set('expr', sineFunctionExpr);
+            }
+
+            // 为每个滑块添加 'input' 事件监听器，这样拖动时会实时更新
+            amplitudeSlider.addEventListener('input', updateParameters);
+            frequencySlider.addEventListener('input', updateParameters);
+            phaseSlider.addEventListener('input', updateParameters);
+        });
+    </script>
+</body>
+
+</html>

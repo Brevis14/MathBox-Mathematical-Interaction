@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>MathBox 交互式欧拉公式演示（带动态半径）</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .info h2 {
+            margin-top: 0;
+        }
+
+        .info p {
+            margin-bottom: 0;
+            line-height: 1.5;
+        }
+
+        .info .formula {
+            font-family: 'Times New Roman', serif;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .real {
+            color: #FF0000;
+            font-weight: bold;
+        }
+
+        .imaginary {
+            color: #00AA00;
+            font-weight: bold;
+        }
+
+        .complex {
+            color: #8A2BE2;
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathbox@0.1.0/build/mathbox-bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="info">
+        <h2>欧拉公式演示</h2>
+        <div class="formula">
+            <span class="complex">e<sup>iθ</sup></span> = <span class="real">cos(θ)</span> + i·<span
+                class="imaginary">sin(θ)</span>
+        </div>
+        <p>
+            拖动鼠标旋转视角。观察<span class="complex">紫色螺旋线</span>如何投影到不同平面上，形成<span class="real">红色余弦</span>、<span
+                class="imaginary">绿色正弦</span>和蓝色单位圆。
+        </p>
+    </div>
+
+    <script>
+        window.addEventListener('load', function () {
+            // 1. 场景设置
+            const mathbox = mathBox({
+                plugins: ['core', 'controls', 'cursor'],
+                controls: { klass: THREE.OrbitControls },
+            });
+            const three = mathbox.three;
+            three.renderer.setClearColor(new THREE.Color(0xFFFFFF), 1.0);
+
+            const THETA_RANGE = 8 * Math.PI;
+            const ANIMATION_DURATION = THETA_RANGE * 2;
+            const PROJECTION_DISTANCE = 3;
+
+            three.camera.position.set(10, 8, 14);
+
+            const view = mathbox.cartesian({
+                range: [[-PROJECTION_DISTANCE, PROJECTION_DISTANCE], [-PROJECTION_DISTANCE, PROJECTION_DISTANCE], [0, THETA_RANGE]],
+                scale: [1.5, 1.5, 1.5],
+            });
+
+            // 2. 坐标轴和投影平面
+            const GRID_COLOR_NORMAL = '#d0d0d0';
+            const GRID_COLOR_DARK = '#a0a0a0';
+            const XY_DIVISIONS = 6;
+            const Z_DIVISIONS = 16;
+
+            const xzGrid = view.transform({ position: [0, -PROJECTION_DISTANCE, 0] });
+            xzGrid.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const x = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(x, 0, 0); emit(x, 0, THETA_RANGE); }
+            }).line({ color: GRID_COLOR_NORMAL, width: 1 });
+            xzGrid.matrix({
+                width: Z_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const z = i * THETA_RANGE / Z_DIVISIONS; emit(-PROJECTION_DISTANCE, 0, z); emit(PROJECTION_DISTANCE, 0, z); }
+            }).line({ color: GRID_COLOR_DARK, width: 1 });
+
+            const yzGrid = view.transform({ position: [-PROJECTION_DISTANCE, 0, 0] });
+            yzGrid.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const y = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(0, y, 0); emit(0, y, THETA_RANGE); }
+            }).line({ color: GRID_COLOR_NORMAL, width: 1 });
+            yzGrid.matrix({
+                width: Z_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const z = i * THETA_RANGE / Z_DIVISIONS; emit(0, -PROJECTION_DISTANCE, z); emit(0, PROJECTION_DISTANCE, z); }
+            }).line({ color: GRID_COLOR_DARK, width: 1 });
+
+            const xyGrid = view.transform({ position: [0, 0, 0] });
+            xyGrid.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const x = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(x, -PROJECTION_DISTANCE, 0); emit(x, PROJECTION_DISTANCE, 0); }
+            }).line({ color: GRID_COLOR_NORMAL, width: 1 });
+            xyGrid.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const y = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(-PROJECTION_DISTANCE, y, 0); emit(PROJECTION_DISTANCE, y, 0); }
+            }).line({ color: GRID_COLOR_DARK, width: 1 });
+
+            const xyGridTop = view.transform({ position: [0, 0, THETA_RANGE] });
+            xyGridTop.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const x = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(x, -PROJECTION_DISTANCE, 0); emit(x, PROJECTION_DISTANCE, 0); }
+            }).line({ color: GRID_COLOR_NORMAL, width: 1 });
+            xyGridTop.matrix({
+                width: XY_DIVISIONS + 1, items: 2,
+                expr: (emit, i) => { const y = -PROJECTION_DISTANCE + i * (2 * PROJECTION_DISTANCE) / XY_DIVISIONS; emit(-PROJECTION_DISTANCE, y, 0); emit(PROJECTION_DISTANCE, y, 0); }
+            }).line({ color: GRID_COLOR_DARK, width: 1 });
+
+            // 统一的动画逻辑函数
+            function getAnimatedTheta(theta, t) {
+                if (t <= THETA_RANGE) { return Math.min(theta, t); }
+                else { const offset = t - THETA_RANGE; return theta + offset; }
+            }
+
+            // 3. 数据源
+            const helixData = view.interval({
+                id: 'helixData', width: 512, channels: 3, range: [0, THETA_RANGE],
+                expr: (emit, theta, i, t) => { const animatedTheta = getAnimatedTheta(theta, t); const z = (t <= THETA_RANGE) ? Math.min(theta, t) : theta; emit(Math.cos(animatedTheta), Math.sin(animatedTheta), z); },
+            });
+            const cosData = view.interval({
+                id: 'cosData', width: 512, channels: 3, range: [0, THETA_RANGE],
+                expr: (emit, theta, i, t) => { const animatedTheta = getAnimatedTheta(theta, t); const z = (t <= THETA_RANGE) ? Math.min(theta, t) : theta; emit(Math.cos(animatedTheta), -PROJECTION_DISTANCE, z); },
+            });
+            const sinData = view.interval({
+                id: 'sinData', width: 512, channels: 3, range: [0, THETA_RANGE],
+                expr: (emit, theta, i, t) => { const animatedTheta = getAnimatedTheta(theta, t); const z = (t <= THETA_RANGE) ? Math.min(theta, t) : theta; emit(-PROJECTION_DISTANCE, Math.sin(animatedTheta), z); },
+            });
+            const circleData = view.interval({
+                id: 'circleData', width: 512, channels: 3, range: [0, THETA_RANGE],
+                expr: (emit, theta, i, t) => { const animatedTheta = getAnimatedTheta(theta, t); if (t <= THETA_RANGE) { if (theta > t) return; } emit(Math.cos(animatedTheta), Math.sin(animatedTheta), 0); },
+            });
+
+            // 4. 绘制所有曲线
+            view.line({ points: '#helixData', color: '#8A2BE2', width: 8 });
+            view.line({ points: '#cosData', color: '#FF0000', width: 4 });
+            view.line({ points: '#sinData', color: '#00AA00', width: 4 });
+            view.line({ points: '#circleData', color: '#0000FF', width: 4 });
+
+            // 5. 动画点和投影连接线
+            mathbox.play({ pace: ANIMATION_DURATION, speed: 1, loop: true });
+
+            const movingPoint = view.interval({
+                id: 'movingPoint', width: 1, channels: 3,
+                expr: (emit, x, i, t) => { const z = (t <= THETA_RANGE) ? t : THETA_RANGE; emit(Math.cos(t), Math.sin(t), z); }
+            });
+            view.point({ points: '#movingPoint', color: 'black', size: 12 });
+
+            const projectors = view.array({
+                channels: 3, items: 6,
+                expr: (emit, i, t) => {
+                    const hz = (t <= THETA_RANGE) ? t : THETA_RANGE;
+                    const hx = Math.cos(t), hy = Math.sin(t);
+                    emit(hx, hy, hz); emit(hx, -PROJECTION_DISTANCE, hz);
+                    emit(hx, hy, hz); emit(-PROJECTION_DISTANCE, hy, hz);
+                    emit(hx, hy, hz); emit(hx, hy, 0);
+                }
+            });
+            view.line({ points: projectors, color: '#808080', width: 2, dash: [0.05, 0.05] });
+
+            // --- 新增功能：动态旋转的半径线 ---
+
+            // 1. 为旋转半径线创建数据源
+            const rotatingRadius = view.array({
+                id: 'rotatingRadius',
+                channels: 3,
+                items: 2, // 一条线段，两个点
+                expr: function (emit, i, t) {
+                    // 计算动画“头部”的实时Z坐标
+                    const z = (t <= THETA_RANGE) ? t : THETA_RANGE;
+
+                    // 计算动画“头部”的X,Y坐标
+                    const x = Math.cos(t);
+                    const y = Math.sin(t);
+
+                    // 发射第一个点：螺旋线的端点（动画的头部）
+                    emit(x, y, z);
+
+                    // 发射第二个点：位于中心轴上，与头部等高的点
+                    emit(0, 0, z);
+                }
+            });
+
+            // 2. 绘制这条线
+            view.line({
+                points: '#rotatingRadius',
+                color: '#FFA500', // 使用醒目的橙色
+                width: 5
+            });
+
+            // --- 新增功能结束 ---
+
+            // 6. 添加文字标签
+            view.array({
+                data: [
+                    [-0.5, -PROJECTION_DISTANCE, THETA_RANGE + 0.5],
+                    [-PROJECTION_DISTANCE, 0.5, THETA_RANGE + 0.5],
+                    [1, 1, -0.5]
+                ]
+            })
+                .text({ data: ["Real Part: cos(θ)", "Imaginary Part: sin(θ)", "Complex Plane"] })
+                .label({ color: 'black', size: 20 });
+
+            view.array({
+                data: [
+                    [PROJECTION_DISTANCE + 0.2, 0, 0],
+                    [0, PROJECTION_DISTANCE + 0.2, 0],
+                    [0, 0, THETA_RANGE + 0.5]
+                ]
+            })
+                .text({ data: ["Real (X)", "Imaginary (Y)", "θ (Z)"] })
+                .label({ color: '#404040', size: 18 });
+        });
+    </script>
+</body>
+
+</html>
