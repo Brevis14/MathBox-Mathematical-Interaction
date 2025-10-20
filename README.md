@@ -32,7 +32,7 @@ cd MathBox-Mathematical-Interaction
 # 或者用 VSCode Live Server / python -m http.server 启动本地服务器
 ```
 
-## 📂 功能
+## 🔧 功能
 
 - **交互功能**：  
   - 用户可以拖动数学图像中的控制点，动态改变函数图像或几何图形（如平面截面）。  
