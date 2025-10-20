@@ -4,12 +4,12 @@
 
 ## 📂 Demos
 
-- [Trigonometric Functions and Inverse Trigonometric Functions - Parameter Correspondence](https://brevis14.github.io/MathBox-Mathematical-Interaction/TF&ITF.html)
+- [Trigonometric Functions and Inverse Trigonometric Functions - Parameter Correspondence](https://brevis14.github.io/MathBox-Mathematical-Interaction/TF_ITF.html)
 - [Sin Function - with Control Slider](https://brevis14.github.io/MathBox-Mathematical-Interaction/SinF-ControlSlider.html)
-- [3D Euler's Formula Projection Demonstration](https://brevis14.github.io/MathBox-Mathematical-Interaction/3dEuler'sProjection.html)
+- [3D Euler's Formula Projection Demonstration](https://brevis14.github.io/MathBox-Mathematical-Interaction/3dEulersProjection.html)
 - [From the Unit Circle to Trigonometric Functions](https://brevis14.github.io/MathBox-Mathematical-Interaction/UnitCircle2TF.html)
 - [Plane Section of a Cube - Highlighted Cross-Section](https://brevis14.github.io/MathBox-Mathematical-Interaction/PlaneSection-Cube.html)
-- [Plane Section of a Cube - More Interactions](https://brevis14.github.io/MathBox-Mathematical-Interaction/PSlight&dark-cube.html)
+- [Plane Section of a Cube - More Interactions](https://brevis14.github.io/MathBox-Mathematical-Interaction/PSlight_dark-cube.html)
 
 👉 如果直接访问 [主入口](https://brevis14.github.io/MathBox-Mathematical-Interaction/)，会看到一个导航页，里面也有以上所有链接。
 
